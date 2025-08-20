@@ -28,7 +28,18 @@ window.addEventListener("load", function () {
       this.frameX = 0;
       this.frameY = 5;
       this.image = document.getElementById("bull");
+      this.jumpOffset = 0;
+      this.isJumping = false;
+      this.jumpSpeed = 0;
     }
+
+    jump() {
+      if (!this.isJumping) {
+        this.isJumping = true;
+        this.jumpSpeed = -8;
+      }
+    }
+
     draw(context) {
       context.drawImage(
         this.image,
@@ -64,6 +75,18 @@ window.addEventListener("load", function () {
     update() {
       this.dx = this.game.mouse.x - this.collisionX;
       this.dy = this.game.mouse.y - this.collisionY;
+
+      if (this.isJumping) {
+        this.jumpOffset += this.jumpSpeed;
+        this.jumpSpeed += 0.5;
+
+        if (this.jumpOffset >= 0) {
+          this.jumpOffset = 0;
+          this.isJumping = false;
+          this.jumpSpeed = 0;
+        }
+      }
+
       //animacja duszka
       const angle = Math.atan2(this.dy, this.dx);
       if (angle < -2.74 || angle > 2.74) this.frameY = 6;
@@ -86,7 +109,8 @@ window.addEventListener("load", function () {
       this.collisionX += this.speedX * this.speedModifier;
       this.collisionY += this.speedY * this.speedModifier;
       this.spriteX = this.collisionX - this.width * 0.5;
-      this.spriteY = this.collisionY - this.height * 0.5 - 100;
+      this.spriteY =
+        this.collisionY - this.height * 0.5 - 100 + this.jumpOffset;
       //granice poziome
       if (this.collisionX < this.collisionRadius)
         this.collisionX = this.collisionRadius;
@@ -306,6 +330,10 @@ window.addEventListener("load", function () {
       });
       window.addEventListener("keydown", (e) => {
         if (e.key == "d") this.debug = !this.debug;
+        if (e.key == " " || e.key == "Spacebar") {
+          e.preventDefault();
+          this.player.jump();
+        }
       });
     }
     render(context, deltaTime) {
