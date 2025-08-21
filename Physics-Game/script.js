@@ -87,7 +87,6 @@ window.addEventListener("load", function () {
         }
       }
 
-      //animacja duszka
       const angle = Math.atan2(this.dy, this.dx);
       if (angle < -2.74 || angle > 2.74) this.frameY = 6;
       else if (angle < -1.96) this.frameY = 7;
@@ -111,17 +110,14 @@ window.addEventListener("load", function () {
       this.spriteX = this.collisionX - this.width * 0.5;
       this.spriteY =
         this.collisionY - this.height * 0.5 - 100 + this.jumpOffset;
-      //granice poziome
       if (this.collisionX < this.collisionRadius)
         this.collisionX = this.collisionRadius;
       else if (this.collisionX > this.game.width - this.collisionRadius)
         this.collisionX = this.game.width - this.collisionRadius;
-      //granice pionowe
       if (this.collisionY < this.game.topMargin + this.collisionRadius)
         this.collisionY = this.game.topMargin + this.collisionRadius;
       else if (this.collisionY > this.game.height - this.collisionRadius)
         this.collisionY = this.game.height - this.collisionRadius;
-      //zderzenia z przeszkodami
       this.game.obstacles.forEach((obstacle) => {
         // [(distance < sumOfRadii), distance,
         //     sumOfRadii, dx, dy]
@@ -145,7 +141,6 @@ window.addEventListener("load", function () {
       this.game = game;
       this.collisionX = Math.random() * this.game.width;
       this.collisionY = Math.random() * this.game.height;
-      //rozmiar
       this.collisionRadius = 40;
       this.image = document.getElementById("obstacles");
       this.spriteWidth = 250;
@@ -158,7 +153,7 @@ window.addEventListener("load", function () {
       this.frameY = Math.floor(Math.random() * 3);
     }
     draw(context) {
-      //zmiana wygladu roslin //change in the appearance of plants
+      //change in the appearance of plants
       context.drawImage(
         this.image,
         this.frameX * this.spriteWidth,
@@ -311,7 +306,7 @@ window.addEventListener("load", function () {
         pressed: false,
       };
 
-      // event listeners//słuchacze zdarzeń
+      // event listeners
       canvas.addEventListener("mousedown", (e) => {
         this.mouse.x = e.offsetX;
         this.mouse.y = e.offsetY;
@@ -375,9 +370,11 @@ window.addEventListener("load", function () {
 
     init() {
       let attempts = 0;
+
       while (this.obstacles.length < this.numberOfObstacles && attempts < 500) {
         let testObstacle = new Obstacle(this);
         let overlap = false;
+
         this.obstacles.forEach((obstacle) => {
           const dx = testObstacle.collisionX - obstacle.collisionX;
           const dy = testObstacle.collisionY - obstacle.collisionY;
@@ -392,6 +389,7 @@ window.addEventListener("load", function () {
           }
         });
         const margin = testObstacle.collisionRadius * 3;
+
         if (
           !overlap &&
           testObstacle.spriteX > 0 &&
