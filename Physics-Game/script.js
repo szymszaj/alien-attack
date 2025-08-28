@@ -139,10 +139,14 @@ window.addEventListener("load", function () {
 
       for (let i = this.game.eggs.length - 1; i >= 0; i--) {
         let egg = this.game.eggs[i];
+
         let [collision] = this.game.checkCollision(this, egg);
+
         if (collision) {
           this.game.eggs.splice(i, 1);
           this.game.score++;
+          document.getElementById("score").textContent =
+            "Score: " + this.game.score;
         }
       }
     }
@@ -347,12 +351,6 @@ window.addEventListener("load", function () {
       if (this.timer > this.interval) {
         context.clearRect(0, 0, this.width, this.height);
 
-        context.save();
-        context.fillStyle = "#fff";
-        context.font = "bold 32px Arial";
-        context.fillText("Score: " + this.score, 50, 50);
-        context.restore();
-
         this.gameObjects = [this.player, ...this.eggs, ...this.obstacles];
         //sort by vertical position
         this.gameObjects.sort((a, b) => {
@@ -425,7 +423,8 @@ window.addEventListener("load", function () {
 
   const game = new Game(canvas);
   game.init();
-  console.log(game);
+
+  document.getElementById("score").textContent = "Score: 0";
 
   let lastTime = 0;
   function animate(timeStamp) {
