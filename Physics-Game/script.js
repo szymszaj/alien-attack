@@ -72,6 +72,7 @@ window.addEventListener("load", function () {
         context.stroke();
       }
     }
+
     update() {
       this.dx = this.game.mouse.x - this.collisionX;
       this.dy = this.game.mouse.y - this.collisionY;
@@ -118,6 +119,7 @@ window.addEventListener("load", function () {
         this.collisionY = this.game.topMargin + this.collisionRadius;
       else if (this.collisionY > this.game.height - this.collisionRadius)
         this.collisionY = this.game.height - this.collisionRadius;
+
       this.game.obstacles.forEach((obstacle) => {
         // [(distance < sumOfRadii), distance,
         //     sumOfRadii, dx, dy]
@@ -134,8 +136,18 @@ window.addEventListener("load", function () {
           this.collisionY = obstacle.collisionY + (sumOfRadii + 1) * unit_y;
         }
       });
+
+      for (let i = this.game.eggs.length - 1; i >= 0; i--) {
+        let egg = this.game.eggs[i];
+        let [collision] = this.game.checkCollision(this, egg);
+        if (collision) {
+          this.game.eggs.splice(i, 1);
+          this.game.score++;
+        }
+      }
     }
   }
+
   class Obstacle {
     constructor(game) {
       this.game = game;
@@ -153,7 +165,6 @@ window.addEventListener("load", function () {
       this.frameY = Math.floor(Math.random() * 3);
     }
     draw(context) {
-      //change in the appearance of plants
       context.drawImage(
         this.image,
         this.frameX * this.spriteWidth,
@@ -293,13 +304,13 @@ window.addEventListener("load", function () {
       this.interval = 1000 / this.fps;
       this.eggTimer = 0;
       this.eggInterval = 1000;
-      //ilosc
       this.numberOfObstacles = 10;
       this.maxEggs = 20;
       this.obstacles = [];
       this.eggs = [];
       this.enemies = [];
       this.gameObjects = [];
+      this.score = 0;
       this.mouse = {
         x: this.width * 0.5,
         y: this.height * 0.5,
@@ -331,9 +342,17 @@ window.addEventListener("load", function () {
         }
       });
     }
+
     render(context, deltaTime) {
       if (this.timer > this.interval) {
         context.clearRect(0, 0, this.width, this.height);
+
+        context.save();
+        context.fillStyle = "#fff";
+        context.font = "bold 32px Arial";
+        context.fillText("Score: " + this.score, 50, 50);
+        context.restore();
+
         this.gameObjects = [this.player, ...this.eggs, ...this.obstacles];
         //sort by vertical position
         this.gameObjects.sort((a, b) => {
