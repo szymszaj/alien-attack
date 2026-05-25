@@ -31,7 +31,8 @@ body {
 #obstacles,
 #bull,
 #egg,
-#toad {
+#toad,
+#larva {
   display: none;
 }
 
