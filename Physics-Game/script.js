@@ -419,18 +419,48 @@ window.addEventListener("load", function () {
       this.height = this.spriteHeight;
       this.spriteX;
       this.spriteY;
+      this.hatchTimer = 0;
+      this.hatchDuration = 8000;
+      this.markedForHatch = false;
     }
     draw(context) {
+      const hatchProgress = this.hatchTimer / this.hatchDuration;
+
+      if (hatchProgress > 0.6) {
+        const urgency = (hatchProgress - 0.6) / 0.4;
+        const pulse = 0.5 + 0.5 * Math.sin(Date.now() * (0.005 + urgency * 0.02));
+        context.save();
+        context.globalAlpha = urgency * 0.7 * pulse;
+        const gradient = context.createRadialGradient(
+          this.collisionX, this.collisionY, 5,
+          this.collisionX, this.collisionY, this.collisionRadius + 20,
+        );
+        gradient.addColorStop(0, "#ff4400");
+        gradient.addColorStop(1, "rgba(255, 68, 0, 0)");
+        context.fillStyle = gradient;
+        context.beginPath();
+        context.arc(this.collisionX, this.collisionY, this.collisionRadius + 20, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+      }
+
       context.drawImage(this.image, this.spriteX, this.spriteY);
+
+      // countdown arc
+      const arcEnd = -Math.PI * 0.5 + (1 - hatchProgress) * Math.PI * 2;
+      context.save();
+      context.strokeStyle =
+        hatchProgress > 0.7 ? "#ff2200" : hatchProgress > 0.4 ? "#ffaa00" : "#00cc44";
+      context.lineWidth = 4;
+      context.globalAlpha = 0.85;
+      context.beginPath();
+      context.arc(this.collisionX, this.collisionY - 30, 18, -Math.PI * 0.5, arcEnd);
+      context.stroke();
+      context.restore();
+
       if (this.game.debug) {
         context.beginPath();
-        context.arc(
-          this.collisionX,
-          this.collisionY,
-          this.collisionRadius,
-          0,
-          Math.PI * 2,
-        );
+        context.arc(this.collisionX, this.collisionY, this.collisionRadius, 0, Math.PI * 2);
         context.save();
         context.globalAlpha = 0.5;
         context.fill();
@@ -438,7 +468,12 @@ window.addEventListener("load", function () {
         context.stroke();
       }
     }
-    update() {
+    update(deltaTime) {
+      this.hatchTimer += deltaTime;
+      if (this.hatchTimer >= this.hatchDuration) {
+        this.markedForHatch = true;
+      }
+
       this.spriteX = this.collisionX - this.width * 0.5;
       this.spriteY = this.collisionY - this.height * 0.5 - 30;
       let collisionObjects = [this.game.player, ...this.game.obstacles];
@@ -452,6 +487,109 @@ window.addEventListener("load", function () {
           this.collisionY = object.collisionY + (sumOfRadii + 1) * unit_y;
         }
       });
+    }
+  }
+
+  class Larva {
+    constructor(game, x, y) {
+      this.game = game;
+      this.collisionX = x;
+      this.collisionY = y;
+      this.collisionRadius = 28;
+      this.image = document.getElementById("larva");
+      this.width = 75;
+      this.height = 150;
+      this.spriteX = x;
+      this.spriteY = y;
+      this.speed = 1.4 + Math.random() * 0.8;
+      this.lifeTimer = 0;
+      this.lifeDuration = 15000;
+      this.markedForDeletion = false;
+      this.spawnFlash = 600;
+    }
+
+    draw(context) {
+      if (this.spawnFlash > 0) {
+        const intensity = this.spawnFlash / 600;
+        context.save();
+        context.globalAlpha = intensity * 0.8;
+        context.fillStyle = "#ff6600";
+        context.beginPath();
+        context.arc(this.collisionX, this.collisionY, this.collisionRadius + 20 * intensity, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+      }
+
+      context.drawImage(this.image, this.spriteX, this.spriteY, this.width, this.height);
+
+      const lifeLeft = 1 - this.lifeTimer / this.lifeDuration;
+      if (lifeLeft < 0.2) {
+        context.save();
+        context.globalAlpha = 1 - lifeLeft / 0.2;
+        context.fillStyle = "rgba(0,0,0,0.7)";
+        context.beginPath();
+        context.arc(this.collisionX, this.collisionY, this.collisionRadius, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+      }
+
+      if (this.game.debug) {
+        context.beginPath();
+        context.arc(this.collisionX, this.collisionY, this.collisionRadius, 0, Math.PI * 2);
+        context.save();
+        context.globalAlpha = 0.5;
+        context.fill();
+        context.restore();
+        context.stroke();
+      }
+    }
+
+    update(deltaTime) {
+      this.lifeTimer += deltaTime;
+      if (this.spawnFlash > 0) this.spawnFlash -= deltaTime;
+      if (this.lifeTimer >= this.lifeDuration) {
+        this.markedForDeletion = true;
+        return;
+      }
+
+      const dx = this.game.player.collisionX - this.collisionX;
+      const dy = this.game.player.collisionY - this.collisionY;
+      const dist = Math.hypot(dx, dy) || 1;
+      this.collisionX += (dx / dist) * this.speed;
+      this.collisionY += (dy / dist) * this.speed;
+
+      if (this.collisionX < this.collisionRadius) this.collisionX = this.collisionRadius;
+      else if (this.collisionX > this.game.width - this.collisionRadius) this.collisionX = this.game.width - this.collisionRadius;
+      if (this.collisionY < this.game.topMargin + this.collisionRadius) this.collisionY = this.game.topMargin + this.collisionRadius;
+      else if (this.collisionY > this.game.height - this.collisionRadius) this.collisionY = this.game.height - this.collisionRadius;
+
+      this.game.obstacles.forEach((obstacle) => {
+        let [collision, distance, sumOfRadii, odx, ody] = this.game.checkCollision(this, obstacle);
+        if (collision) {
+          const unit_x = odx / distance;
+          const unit_y = ody / distance;
+          this.collisionX = obstacle.collisionX + (sumOfRadii + 1) * unit_x;
+          this.collisionY = obstacle.collisionY + (sumOfRadii + 1) * unit_y;
+        }
+      });
+
+      this.spriteX = this.collisionX - this.width * 0.5;
+      this.spriteY = this.collisionY - this.height * 0.5 - 20;
+
+      const [playerCollision] = this.game.checkCollision(this, this.game.player);
+      if (playerCollision) {
+        if (this.game.player.shieldActive) {
+          this.markedForDeletion = true;
+        } else if (this.game.player.hitCooldown <= 0) {
+          this.game.player.lives--;
+          this.game.player.hitCooldown = this.game.player.hitCooldownMax;
+          this.markedForDeletion = true;
+          if (this.game.player.lives <= 0) {
+            this.game.player.lives = 0;
+            this.game.gameOver = true;
+          }
+        }
+      }
     }
   }
 
@@ -473,6 +611,7 @@ window.addEventListener("load", function () {
       this.obstacles = [];
       this.eggs = [];
       this.projectiles = [];
+      this.larvae = [];
       this.gameObjects = [];
       this.score = 0;
       this.gameOver = false;
@@ -522,6 +661,7 @@ window.addEventListener("load", function () {
       this.gameOver = false;
       this.projectiles = [];
       this.eggs = [];
+      this.larvae = [];
       this.player = new Player(this);
       document.getElementById("score").textContent = "Score: 0";
     }
@@ -537,12 +677,21 @@ window.addEventListener("load", function () {
 
         this.player.update(deltaTime);
 
-        this.gameObjects = [this.player, ...this.eggs, ...this.obstacles];
+        this.gameObjects = [this.player, ...this.eggs, ...this.obstacles, ...this.larvae];
         this.gameObjects.sort((a, b) => a.collisionY - b.collisionY);
         this.gameObjects.forEach((object) => {
           object.draw(context);
           if (object !== this.player) object.update(deltaTime);
         });
+
+        // egg hatching
+        for (let i = this.eggs.length - 1; i >= 0; i--) {
+          if (this.eggs[i].markedForHatch) {
+            this.larvae.push(new Larva(this, this.eggs[i].collisionX, this.eggs[i].collisionY));
+            this.eggs.splice(i, 1);
+          }
+        }
+        this.larvae = this.larvae.filter((l) => !l.markedForDeletion);
 
         // projectiles
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
